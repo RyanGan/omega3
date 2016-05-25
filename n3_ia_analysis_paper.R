@@ -655,30 +655,32 @@ summary(tab)
 # note: survival dataset needs some QCing
 # import survival dataset
 tv_path <- paste0('C:/Users/RGan/Google Drive/9_Health_PUFA/SAS Data Sets/',
-                  'pufasurvival.sas7bdat')
+                  'pufa_survival_052416.sas7bdat')
 
 tv_ia <- read_sas(tv_path)
 
+summary(tv_ia)
 # add some variables 
-tv_ia <- tv_ia %>% mutate(age50 = ifelse(Age >= 50, 1, 0))
+tv_ia <- tv_ia %>% mutate(age50 = ifelse(age_base >= 50, 1, 0),
+                          se_num = ifelse(SE == 'Pos', 1, 0),
+                          epa_dpa_dha = epa + dpa + dha)
 
+xtabs(~SE + se_num, tv_ia)
 # se stratum
-se_pos_ia <- tv_ia %>% filter(SE_num == 1)
-se_neg_ia <- tv_ia %>% filter(SE_num == 0)
+se_pos_ia <- tv_ia %>% filter(se_num == 1)
+se_neg_ia <- tv_ia %>% filter(se_num == 0)
+# age stratum
+age_over50 <- tv_ia %>% filter(age50 ==1)
+age_under50 <- tv_ia %>% filter(age50 ==0)
 
-glimpse(tv_ia)
-xtabs(~IA + RA, tv_ia)
+xtabs(~IA , tv_ia)
 
 # total_n3
-surv_mod <- coxph(Surv(T1, T2, IA== 1) ~ sd_total_n3 + age50 + SE_num + Omega3_bi, 
+surv_mod <- coxph(Surv(T1, T2, IA == 1) ~ sd_total_n3 + age50 + se_num + Omega3_bi, 
               data=tv_ia)
 summary(surv_mod)
-
-
-# there are 5 missing values of n3 fatty acids, should not be in dataset
-
-
-surv_mod <- coxph(Surv(T1, T2, IA== 1) ~ nextvisit_sd_total_n3 + age50 + SE_num + 
+# total n3 at visit of outcome
+surv_mod <- coxph(Surv(T1, T2, IA== 1) ~ nextvisit_sd_totaln3 + age50 + se_num + 
                     Omega3_bi, data=tv_ia)
 summary(surv_mod)
 
@@ -692,8 +694,42 @@ surv_mod <- coxph(Surv(T1, T2, IA== 1) ~ sd_total_n3 + Omega3_bi,
               data=se_neg_ia)
 summary(surv_mod)
 
+# age >50
+surv_mod <- coxph(Surv(T1, T2, IA== 1) ~ sd_total_n3 + se_num + 
+                    Omega3_bi, data=age_over50)
+summary(surv_mod)
+
+# age under 50
+surv_mod <- coxph(Surv(T1, T2, IA== 1) ~ sd_total_n3 + se_num + 
+                    Omega3_bi, data=age_under50)
+summary(surv_mod)
+
 # ala
-surv_mod <- coxph(Surv(T1, T2, IA== 1) ~ sd_ala + age50 + SE_num + Omega3_bi, 
+surv_mod <- coxph(Surv(T1, T2, IA== 1) ~ sd_ALA + age50 + se_num + Omega3_bi, 
               data=tv_ia)
 summary(surv_mod)
 
+# epa
+surv_mod <- coxph(Surv(T1, T2, IA== 1) ~ sd_EPA + age50 + se_num + Omega3_bi, 
+              data=tv_ia)
+summary(surv_mod)
+
+# dpa
+surv_mod <- coxph(Surv(T1, T2, IA== 1) ~ sd_dpa + age50 + se_num + Omega3_bi, 
+              data=tv_ia)
+summary(surv_mod)
+
+# dha
+surv_mod <- coxph(Surv(T1, T2, IA== 1) ~ sd_DHA + age50 + se_num + Omega3_bi, 
+              data=tv_ia)
+summary(surv_mod)
+
+# epa+dha
+surv_mod <- coxph(Surv(T1, T2, IA== 1) ~ sd_epa_dha + age50 + se_num + Omega3_bi, 
+              data=tv_ia)
+summary(surv_mod)
+
+# epa+dha+dpa
+surv_mod <- coxph(Surv(T1, T2, IA== 1) ~ epa_dpa_dha + age50 + se_num + Omega3_bi, 
+              data=tv_ia)
+summary(surv_mod)
