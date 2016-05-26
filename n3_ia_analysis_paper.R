@@ -22,8 +22,7 @@ library(haven) # haven package for SAS survival file
 library(survival) # survival model
  
 # import csv dataset of baseline dataframe -------------------------------------
-read_path <- paste0('C:/Users/RGan/Google Drive/9_Health_PUFA/CSV Data Sets/',
-                     'ia_baseline_analysis_df.csv')
+read_path <- paste0('../CSV Data Sets/ia_baseline_analysis_df.csv')
 
 ia_groups_9hlth_first_vis <- read.csv(read_path)
 
@@ -54,7 +53,7 @@ ia_analysis_df$ia_cat <- as.factor(ia_analysis_df$ia_cat)
 
 str(ia_analysis_df$ia_cat)
 
-# table 1 descriptives by ia status at baseline --------------------------------
+# Table 1 descriptives by ia status at baseline --------------------------------
 # incident IA who are not positive at baseline are included in the no ia group
 
 # age 
@@ -69,8 +68,13 @@ mu
 ggplot(ia_analysis_df, aes(x=Age, color=ia_cat)) + 
   geom_density() + 
   geom_vline(data=mu, aes(xintercept=mean_age, color=ia_cat), linetype='dashed')
-
 # parametric tests with age probably okay
+# Age >=50
+tab <- xtabs(~ IA_base + age50, data = ia_analysis_df)
+tab
+prop.table(tab, 1)
+summary(tab)
+fisher.test(tab)
 
 # sex
 tab <- xtabs(~ IA_base + Sex, data=ia_analysis_df)
@@ -651,12 +655,8 @@ fisher.test(tab)
 summary(tab)
 
 # Tabel 4: Incident time-varying survival model --------------------------------
-
-# note: survival dataset needs some QCing
 # import survival dataset
-tv_path <- paste0('C:/Users/RGan/Google Drive/9_Health_PUFA/SAS Data Sets/',
-                  'pufa_survival_052416.sas7bdat')
-
+tv_path <- paste0('../SAS Data Sets/pufa_survival_052416.sas7bdat')
 tv_ia <- read_sas(tv_path)
 
 summary(tv_ia)
