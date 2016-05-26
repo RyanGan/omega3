@@ -2,12 +2,13 @@
 #-------------------------------------------------------------------------------
 # Title: Comparison of IA at base, Incident IA, and No IA in 9hlth CCP3 pos
 # Author: Ryan Gan
-# Date: 1/29/15
+# Date Created: 5/25/15         Date Modified: 5/25/16
 # R Version: 3.2.2
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 
 # Note 5/13/16: I'm rerunning these just to make sure numbers are correct
+# Note 5/25/16: Elizabeth provided an updated survival dataset
 
 # loading package --------------------------------------------------------------
 # library(foreign)
