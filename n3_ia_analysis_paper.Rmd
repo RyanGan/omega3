@@ -15,6 +15,7 @@ Calling libraries used for data manipulation and analysis.
 library(tidyverse) # data wrangling 
 library(broom) # analysis object to tidy dataframe
 library(survival) # time-varying model
+library(knitr) # for kable function
 
 ```
 
@@ -44,8 +45,7 @@ baseline_df <- read_csv("ia_baseline_analysis_df.csv") %>%
 
 ```
 
-Creating Table 1 of descriptive characteristics by baseline IA status. I applied Fisher's exact test to all categorical variables.
-
+Creating Table 1 of descriptive characteristics by baseline IA status. First step is creating an empty matrix and calculating cell values for each variable.
 
 ```{r table 1, message=F, warning=F}
 
@@ -59,8 +59,6 @@ colnames(table1_matrix) <- c("variable", "ia_yes_n", "ia_yes_perc",
 table1_matrix[,1] <- c("n", "mean_age", "age50_perc", "female_perc", "nhw_perc",
   "ed_gt_hs", "income_gt_40k", "pack_years_gt_10", "shared_epitope_pos", 
   "n3_supp_use", "multi_vit_use", "rf_pos", "crp_pos", "ccp2_pos")
-
-head(table1_matrix)
 
 # calculate n
 tab1_n_df <- baseline_df %>% 
@@ -96,6 +94,13 @@ table1_matrix[ ,3] <- as.numeric(as.vector(tab1_perc_df[2, 2:15]))
 # fill IA no percent
 table1_matrix[ ,5] <- as.numeric(as.vector(tab1_perc_df[1, 2:15]))
 
+
+```
+
+Now I want to calculate test statistics for each row variable. As age is a continous variable, I test the differences between IA positive and IA negative at baseline using a t-test (in a linear model). For the 2x2 contingency table tests, I use Fisher's exact test as it should be approximate to Persons chi-squared for sufficiently large sample sizes.
+
+```{r table 1 test statistcis, message=F, warning=F, results='asis'}
+
 # perform statistics and fill colum n 6 ----
 
 # calculate p value for test of mean differences
@@ -130,7 +135,11 @@ for(i in 1:length(var_loop)){
   
 }
 
+# convert table 1 matrix to dataframe
+table1_df <- data.frame(table1_matrix)
 
+knitr::kable(table1_df, caption = paste0("Table 1: Demographic and descriptive",
+      " characteristics of ACPA positive subjects by Inflammatory Arthritis (IA) status at baseline"))
 
 
 
