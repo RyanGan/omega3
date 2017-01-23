@@ -1,0 +1,137 @@
+---
+title: "Omega-3 and Inflammatory Arthritis Analysis"
+author: "Ryan_Gan"
+date: "January 23, 2017"
+output: html_document
+---
+
+## Purpose of Markdown Document
+
+This document contains the code used to produce the results for the paper, *The association between omega-3 fatty acid biomarkers and inflammatory arthritis in an at-risk population positive for anti-citrullinated protein antibodies.*
+
+Calling libraries used for data manipulation and analysis.
+```{r libraries, message=F, warning=F}
+
+library(tidyverse) # data wrangling 
+library(broom) # analysis object to tidy dataframe
+library(survival) # time-varying model
+
+```
+
+## Baseline Analysis
+
+Code and results for the cross-sectional analysis of baseline inflammatory arthritis (IA) prevalence and the association with omega-3 fatty acid (n-3 FA) biomarker, n-3 FA percentage of red blood cells (n-3 FA % in RBCs).
+
+Reading baseline dataframe and selecting only 47 of the 657 variables that are relevant for the baseline analyses. 
+
+### Note: I have some missing data for packyears and supplement use that I believe Elizabeth imputed based on subjects' subsequent records. Ask for an updated dataframe.
+
+```{r read baseline dataframe, message=F, warning=F}
+
+# reading baseline data
+baseline_df <- read_csv("ia_baseline_analysis_df.csv") %>% 
+  # limiting dataframe of 657 variables to relevant study variables
+  select(ID, DOVisit, LABID, visit_num, Age, Gender, Sex, Race, Race_bi, Educ, 
+         Inc, BMI, Packyears_new, SE_num, Omega3_bi, Multivits_bi, CCP3, CCP31, 
+         CCP2, RFneph, CRPOutcome, total_n3, total_n6, ala, epa, dha, dpa, 
+         epa_dha, la, gla, ara, f1perc, f2perc, stnd_ala, stnd_epa, stnd_dha, 
+         stnd_dpa, stnd_epa_dha, stnd_total_n3, stnd_la, stnd_gla, stnd_ara, 
+         stnd_total_n6, IA_base) %>% 
+  # creating binary variables
+  mutate(age50 = ifelse(Age >= 50, 1, 0), # age >= 50
+         py10 = ifelse(Packyears_new > 10, 1, 0), # pack years more than 10 years
+         crp = ifelse(CRPOutcome == "NN confirmed pos", 1, 0)) # crp positivity
+
+```
+
+Creating Table 1 of descriptive characteristics by baseline IA status. I applied Fisher's exact test to all categorical variables.
+
+
+```{r table 1, message=F, warning=F}
+
+# create empty dataframe of table 1
+table1_matrix <- matrix(nrow = 14, ncol = 6, byrow = T)
+# define column names for matrix
+colnames(table1_matrix) <- c("variable", "ia_yes_n", "ia_yes_perc",
+                             "ia_no_n", "ia_no_perc", "p_val")
+
+# fill column 1 with variable names
+table1_matrix[,1] <- c("n", "mean_age", "age50_perc", "female_perc", "nhw_perc",
+  "ed_gt_hs", "income_gt_40k", "pack_years_gt_10", "shared_epitope_pos", 
+  "n3_supp_use", "multi_vit_use", "rf_pos", "crp_pos", "ccp2_pos")
+
+head(table1_matrix)
+
+# calculate n
+tab1_n_df <- baseline_df %>% 
+  group_by(IA_base) %>% # group by IA status
+  na.omit() %>% # removing missing
+  summarise(n = n(), mean_age = n(), age50_n = sum(age50),
+    female_n = sum(Sex), nhw_n = sum(Race_bi), ed_gt_hs_n = sum(Educ),
+    income_gt_40k_n = sum(Inc), pack_years_gt_10_n = sum(py10),
+    shared_epitope_pos_n = sum(SE_num), n3_supp_use_n = sum(Omega3_bi),
+    multi_vit_use_n = sum(Multivits_bi), rf_pos_n = sum(RFneph),
+    crp_pos_n = sum(crp), ccp2_pos_n = sum(CCP2)) 
+
+
+# calculate percentage
+tab1_perc_df <- baseline_df %>% 
+  group_by(IA_base) %>% # group by IA status
+  na.omit() %>% # removing missing
+  summarise(n = n(), mean_age = mean(Age), age50_perc = sum(age50)/n,
+    female_perc = sum(Sex)/n, nhw_perc = sum(Race_bi)/n, ed_gt_hs = sum(Educ)/n,
+    income_gt_40k = sum(Inc)/n, pack_years_gt_10 = sum(py10)/n,
+    shared_epitope_pos = sum(SE_num)/n, n3_supp_use = sum(Omega3_bi)/n,
+    multi_vit_use = sum(Multivits_bi)/n, rf_pos = sum(RFneph)/n,
+    crp_pos = sum(crp)/n, ccp2_pos = sum(CCP2)/n) %>% 
+  round(., 2) # round to two digits
+
+# fill columns ----
+# fill IA yes n column
+table1_matrix[ ,2] <- as.numeric(as.vector(tab1_n_df[2, 2:15]))
+# fill IA no n column
+table1_matrix[ ,4] <- as.numeric(as.vector(tab1_n_df[1, 2:15]))
+# fill IA yes percent
+table1_matrix[ ,3] <- as.numeric(as.vector(tab1_perc_df[2, 2:15]))
+# fill IA no percent
+table1_matrix[ ,5] <- as.numeric(as.vector(tab1_perc_df[1, 2:15]))
+
+# perform statistics and fill colum n 6 ----
+
+# calculate p value for test of mean differences
+age_p <- as.vector(tidy(lm(Age ~ IA_base, baseline_df)) %>% 
+  filter(term == "IA_base") %>% 
+  select(p.value) %>% 
+  round(., 3))
+
+# fill test of mean difference in age p value
+table1_matrix[2, 6] <- as.numeric(age_p)
+
+# create loop to calculate p values for binary variables
+
+# create vector of variables to loop
+var_loop <- c("age50", "Sex", "Race_bi", "Educ", "Inc", "py10", "SE_num", 
+              "Omega3_bi", "Multivits_bi", "RFneph", "crp", "CCP2")
+
+
+for(i in 1:length(var_loop)){
+
+  # create tab
+  tab <- xtabs(as.formula(paste0("~IA_base +", var_loop[i])),
+               data = baseline_df)
+  
+  # perform fisher's exact test; will be approximate to chisq with 
+  # large enough sample size
+
+  fisher_p <- tidy(fisher.test(tab)) %>% select(p.value)
+
+  # fill in matrix
+  table1_matrix[i + 2, 6] <- round(as.numeric(fisher_p), 3)
+  
+}
+
+
+
+
+
+```
