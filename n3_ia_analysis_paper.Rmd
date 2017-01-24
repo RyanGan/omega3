@@ -19,31 +19,23 @@ library(knitr) # for kable function
 
 ```
 
-## Baseline Analysis
+## Baseline Visit Cross-Sectional Analysis
 
 Code and results for the cross-sectional analysis of baseline inflammatory arthritis (IA) prevalence and the association with omega-3 fatty acid (n-3 FA) biomarker, n-3 FA percentage of red blood cells (n-3 FA % in RBCs).
 
-Reading baseline dataframe and selecting only 47 of the 657 variables that are relevant for the baseline analyses. 
+### Data Import
 
-### Note: I have some missing data for packyears and supplement use that I believe Elizabeth imputed based on subjects' subsequent records. Ask for an updated dataframe.
+Reading baseline dataframe Elizabeth provided. There are 52 observations with 56 variables. Elizabeth limited dataframe to relevant variables and imputed some missing variables based on prior observations on the same subject.
 
 ```{r read baseline dataframe, message=F, warning=F}
 
 # reading baseline data
-baseline_df <- read_csv("ia_baseline_analysis_df.csv") %>% 
-  # limiting dataframe of 657 variables to relevant study variables
-  select(ID, DOVisit, LABID, visit_num, Age, Gender, Sex, Race, Race_bi, Educ, 
-         Inc, BMI, Packyears_new, SE_num, Omega3_bi, Multivits_bi, CCP3, CCP31, 
-         CCP2, RFneph, CRPOutcome, total_n3, total_n6, ala, epa, dha, dpa, 
-         epa_dha, la, gla, ara, f1perc, f2perc, stnd_ala, stnd_epa, stnd_dha, 
-         stnd_dpa, stnd_epa_dha, stnd_total_n3, stnd_la, stnd_gla, stnd_ara, 
-         stnd_total_n6, IA_base) %>% 
-  # creating binary variables
-  mutate(age50 = ifelse(Age >= 50, 1, 0), # age >= 50
-         py10 = ifelse(Packyears_new > 10, 1, 0), # pack years more than 10 years
-         crp = ifelse(CRPOutcome == "NN confirmed pos", 1, 0)) # crp positivity
+baseline_df <- read_csv("baseline.csv") %>% 
+  rename(visit_num = visit_)
 
 ```
+
+### Descriptive Table 1 by IA Status (Table 1)
 
 Creating Table 1 of descriptive characteristics by baseline IA status. First step is creating an empty matrix and calculating cell values for each variable.
 
@@ -56,32 +48,33 @@ colnames(table1_matrix) <- c("variable", "ia_yes_n", "ia_yes_perc",
                              "ia_no_n", "ia_no_perc", "p_val")
 
 # fill column 1 with variable names
-table1_matrix[,1] <- c("n", "mean_age", "age50_perc", "female_perc", "nhw_perc",
-  "ed_gt_hs", "income_gt_40k", "pack_years_gt_10", "shared_epitope_pos", 
-  "n3_supp_use", "multi_vit_use", "rf_pos", "crp_pos", "ccp2_pos")
+table1_matrix[,1] <- c("n", "Age (Mean)", "Age > 50", "Female", 
+  "Non-Hispanic White","Education > HS", "Income > 40k", 
+  "Pack Years > 10", "SE+", "n-3 FA Supplement", "Multivitamin", 
+  "RF+", "CRP+", "CCP2+")
 
 # calculate n
 tab1_n_df <- baseline_df %>% 
-  group_by(IA_base) %>% # group by IA status
+  group_by(ia_base) %>% # group by IA status
   na.omit() %>% # removing missing
-  summarise(n = n(), mean_age = n(), age50_n = sum(age50),
-    female_n = sum(Sex), nhw_n = sum(Race_bi), ed_gt_hs_n = sum(Educ),
-    income_gt_40k_n = sum(Inc), pack_years_gt_10_n = sum(py10),
-    shared_epitope_pos_n = sum(SE_num), n3_supp_use_n = sum(Omega3_bi),
-    multi_vit_use_n = sum(Multivits_bi), rf_pos_n = sum(RFneph),
-    crp_pos_n = sum(crp), ccp2_pos_n = sum(CCP2)) 
+  summarise(n = n(), mean_age = n(), age50_n = sum(age_bi),
+    female_n = sum(sex), nhw_n = sum(race_bi), ed_gt_hs_n = sum(educ),
+    income_gt_40k_n = sum(inc), pack_years_gt_10_n = sum(py10),
+    shared_epitope_pos_n = sum(se_bi), n3_supp_use_n = sum(omega3_bi),
+    multi_vit_use_n = sum(multivits_bi), rf_pos_n = sum(rfneph),
+    crp_pos_n = sum(crp), ccp2_pos_n = sum(ccp2)) 
 
 
 # calculate percentage
 tab1_perc_df <- baseline_df %>% 
-  group_by(IA_base) %>% # group by IA status
+  group_by(ia_base) %>% # group by IA status
   na.omit() %>% # removing missing
-  summarise(n = n(), mean_age = mean(Age), age50_perc = sum(age50)/n,
-    female_perc = sum(Sex)/n, nhw_perc = sum(Race_bi)/n, ed_gt_hs = sum(Educ)/n,
-    income_gt_40k = sum(Inc)/n, pack_years_gt_10 = sum(py10)/n,
-    shared_epitope_pos = sum(SE_num)/n, n3_supp_use = sum(Omega3_bi)/n,
-    multi_vit_use = sum(Multivits_bi)/n, rf_pos = sum(RFneph)/n,
-    crp_pos = sum(crp)/n, ccp2_pos = sum(CCP2)/n) %>% 
+  summarise(n = n(), mean_age = mean(age), age50_perc = sum(age_bi)/n,
+    female_perc = sum(sex)/n, nhw_perc = sum(race_bi)/n, ed_gt_hs = sum(educ)/n,
+    income_gt_40k = sum(inc)/n, pack_years_gt_10 = sum(py10)/n,
+    shared_epitope_pos = sum(se_bi)/n, n3_supp_use = sum(omega3_bi)/n,
+    multi_vit_use = sum(multivits_bi)/n, rf_pos = sum(rfneph)/n,
+    crp_pos = sum(crp)/n, ccp2_pos = sum(ccp2)/n) %>% 
   round(., 2) # round to two digits
 
 # fill columns ----
@@ -100,12 +93,10 @@ table1_matrix[ ,5] <- as.numeric(as.vector(tab1_perc_df[1, 2:15]))
 Now I want to calculate test statistics for each row variable. As age is a continous variable, I test the differences between IA positive and IA negative at baseline using a t-test (in a linear model). For the 2x2 contingency table tests, I use Fisher's exact test as it should be approximate to Persons chi-squared for sufficiently large sample sizes.
 
 ```{r table 1 test statistcis, message=F, warning=F, results='asis'}
-
 # perform statistics and fill colum n 6 ----
-
 # calculate p value for test of mean differences
-age_p <- as.vector(tidy(lm(Age ~ IA_base, baseline_df)) %>% 
-  filter(term == "IA_base") %>% 
+age_p <- as.vector(tidy(lm(age ~ ia_base, baseline_df)) %>% 
+  filter(term == "ia_base") %>% 
   select(p.value) %>% 
   round(., 3))
 
@@ -113,23 +104,18 @@ age_p <- as.vector(tidy(lm(Age ~ IA_base, baseline_df)) %>%
 table1_matrix[2, 6] <- as.numeric(age_p)
 
 # create loop to calculate p values for binary variables
-
 # create vector of variables to loop
-var_loop <- c("age50", "Sex", "Race_bi", "Educ", "Inc", "py10", "SE_num", 
-              "Omega3_bi", "Multivits_bi", "RFneph", "crp", "CCP2")
-
+var_loop <- c("age_bi", "sex", "race_bi", "educ", "inc", "py10", "se_bi", 
+              "omega3_bi", "multivits_bi", "rfneph", "crp", "ccp2")
 
 for(i in 1:length(var_loop)){
-
   # create tab
-  tab <- xtabs(as.formula(paste0("~IA_base +", var_loop[i])),
+  tab <- xtabs(as.formula(paste0("~ia_base +", var_loop[i])),
                data = baseline_df)
   
   # perform fisher's exact test; will be approximate to chisq with 
   # large enough sample size
-
   fisher_p <- tidy(fisher.test(tab)) %>% select(p.value)
-
   # fill in matrix
   table1_matrix[i + 2, 6] <- round(as.numeric(fisher_p), 3)
   
@@ -139,8 +125,180 @@ for(i in 1:length(var_loop)){
 table1_df <- data.frame(table1_matrix)
 
 knitr::kable(table1_df, caption = paste0("Table 1: Demographic and descriptive",
-      " characteristics of ACPA positive subjects by Inflammatory Arthritis (IA) status at baseline"))
+  " characteristics of ACPA positive subjects by Inflammatory Arthritis", 
+  " (IA) status at baseline"))
 
+```
+
+Table 1 suggests a significant difference in proportions in the IA yes vs IA no group for n-3 FA supplement use, RF positivity, and CRP positivity.
+
+### Association Between n-3 FA % in RBCs and Prevalence of IA at Baseline Visit (Table 2)
+
+The following code contains logistic regression models for each n-3 FA % in RBCs biomarker. n-3 FA % in RBC biomarkers are: ALA, EPA, DPA, DHA, EPA+DHA, and ALA+EPA+DPA+DHA = Total n-3 FA. n-3 FA % in RBC variables were standardized, where the standard deviation of each n-3 FA distribution was divide from the distribution to allow for a "1 SD increase"" interpreation across all n-3 FA variables. Adjustment variables were based on confounding variables for variables associated with IA either in the baseline visit in the cross-sectional analysis or the baseline visit in the incidence study. 
+
+```{r logistic regression loop, message=F, warning=F, results='asis'}
+# create empty matrix for table
+tab2_matrix <- matrix(nrow = 6, ncol = 5 )
+# column names of tables
+colnames(tab2_matrix) <- c("n3_FA_RBC", "OR", "Lower_95_CI",
+                           "Upper_95_CI", "p_value") 
+# variables to loop through
+n3_vars <- c("sd_ala", "sd_epa", "sd_dpa", "sd_dha", "sd_epa_dha",
+             "sd_total_n3")
+
+# fill first column of matrix with n3 vars
+tab2_matrix[,1] <- c("ALA", "EPA", "DPA", "DHA", "EPA+DHA",
+                     "Total n-3 FA")
+
+# Iteration of logistic regression through n-3 FAs
+for(i in 1:length(n3_vars)){
+  # general logistc regression; using tidy from broom to output 
+  # coeffecients
+  log_reg_mod <- tidy(glm(as.formula(paste0("ia_base ~", 
+                    paste(n3_vars[i], "omega3_bi", "py10", "rfneph", 
+                          "crp", "ccp2", "sex", "se_bi", sep = "+"))),
+                    data = baseline_df, family = "binomial"(link="logit"))) 
+  
+  # calculate odds ratio and 95% CI
+  odds_ratio <- log_reg_mod %>% filter(term == n3_vars[i]) %>% 
+    # estimate lower and upper 95% CI bounds
+    mutate(lower_bound = estimate - (1.96*std.error),
+           upper_bound = estimate + (1.96*std.error)) %>% 
+    select(term, estimate, lower_bound, upper_bound, p.value)
+
+  # fill ith row of table 2
+  tab2_matrix[i,2:4] <- round(as.numeric(exp(odds_ratio[1, 2:4])),2)
+  tab2_matrix[i,5] <- round(as.numeric(odds_ratio[1,5]),2)
+
+}
+
+# create table of logistic values
+# convert table 1 matrix to dataframe
+table2_df <- data.frame(tab2_matrix)
+
+knitr::kable(table2_df, caption = paste0("Table 2: Association between n-3",
+  " fatty % in red blood cells (RBC) and inflammatory arthritis (IA) in ACPA",
+  " positive subjects at baseline visit."))
+```
+
+Logistic regression models were all adjusted for n-3 fatty acid supplement use, pack years > 10, RF+, CRP+, CCP2+, sex, and SE. The odds ratios represent the difference in odds of IA for a one standard deviation (SD) difference in the n-3 FA% in RBC. The SD for these variables are listed below: ALA: 0.14, EPA: 0.50, DPA: 0.45, DHA: 1.15, EPA and DHA: 1.52, Total-n3: 1.83.
+
+Increasing DPA, EPA+DHA, and Total n-3 FAs were significantly associated with a lower prevalence of IA.
+
+## Incident IA Time-Varying Analysis
+
+Fill in descriptions of time-varying approach to analyze incident IA.
+
+### Import Time-Varying Dataframe
+
+Read in time-varying incident IA dataframe created by Elizabeth..
+
+```{r read incident dataframe, message=F, warning=F}
+
+# reading baseline data
+timevarying_df <- read_csv("incident_timevary.csv") %>% 
+  rename(visit_num = visit_) %>% 
+  # code indicator of IA incident group at baseline
+  mutate(incident_ia_base = ifelse(ia_cat == 2, 1, 0))
+
+```
+
+### Descriptive Characteristics at Baseline Visit of IA Status (Table 3)
+
+Calculate descriptive characteristics of incident IA dataframe by IA status at their baseline visit. I need to figure out how to handle correct income calculation in dataframe.
+
+```{r table 3, message=F, warning=F}
+summary(timevarying_df)
+# create empty dataframe of table 1
+table3_matrix <- matrix(nrow = 14, ncol = 6, byrow = T)
+# define column names for matrix
+colnames(table3_matrix) <- c("variable", "ia_yes_n", "ia_yes_perc",
+                             "ia_no_n", "ia_no_perc", "p_val")
+
+# fill column 1 with variable names
+table3_matrix[,1] <- c("n", "Age (Mean)", "Age > 50", "Female", 
+  "Non-Hispanic White","Education > HS", "Income > 40k", 
+  "Pack Years > 10", "SE+", "n-3 FA Supplement", "Multivitamin", 
+  "RF+", "CRP+", "CCP2+")
+
+# calculate n
+tab3_n_df <- timevarying_df %>% 
+  filter(visit_num == 1) %>% # subset by first visit
+  group_by(incident_ia_base) %>% # group by IA status
+  na.omit() %>% # removing missing
+  summarise(n = n(), mean_age = n(), age50_n = sum(age_bi),
+    female_n = sum(sex), nhw_n = sum(race_bi), ed_gt_hs_n = sum(educ),
+    income_gt_40k_n = sum(inc), pack_years_gt_10_n = sum(py10),
+    shared_epitope_pos_n = sum(se_bi), n3_supp_use_n = sum(omega3_bi),
+    multi_vit_use_n = sum(multivits_bi), rf_pos_n = sum(rfneph),
+    crp_pos_n = sum(crp), ccp2_pos_n = sum(ccp2)) 
+
+# calcualte income missing
+tab3_perc_inc <- timevarying_df
+
+# calculate percentage
+tab3_perc_df <- timevarying_df %>% 
+  filter(visit_num == 1) %>% # subset by first visit
+  filter(!is.na(inc)) %>% # exclude missing income rows
+  group_by(incident_ia_base) %>% # group by IA status
+  summarise(n = n(), mean_age = mean(age), age50_perc = sum(age_bi)/n,
+    female_perc = sum(sex)/n, nhw_perc = sum(race_bi)/n, ed_gt_hs = sum(educ)/n,
+    income_gt_40k = sum(inc)/n, pack_years_gt_10 = sum(py10)/n,
+    shared_epitope_pos = sum(se_bi)/n, n3_supp_use = sum(omega3_bi)/n,
+    multi_vit_use = sum(multivits_bi)/n, rf_pos = sum(rfneph)/n,
+    crp_pos = sum(crp)/n, ccp2_pos = sum(ccp2)/n) %>% 
+  round(., 2) # round to two digits
+
+# fill columns ----
+# fill IA yes n column
+table3_matrix[ ,2] <- as.numeric(as.vector(tab3_n_df[2, 2:15]))
+# fill IA no n column
+table3_matrix[ ,4] <- as.numeric(as.vector(tab3_n_df[1, 2:15]))
+# fill IA yes percent
+table3_matrix[ ,3] <- as.numeric(as.vector(tab3_perc_df[2, 2:15]))
+# fill IA no percent
+table3_matrix[ ,5] <- as.numeric(as.vector(tab3_perc_df[1, 2:15]))
 
 
 ```
+
+Now I want to calculate test statistics for each row variable. As age is a continous variable, I test the differences between IA positive and IA negative at baseline using a t-test (in a linear model). For the 2x2 contingency table tests, I use Fisher's exact test as it should be approximate to Persons chi-squared for sufficiently large sample sizes.
+
+```{r table 3 test statistcis, message=F, warning=F, results='asis'}
+# perform statistics and fill colum n 6 ----
+# calculate p value for test of mean differences
+age_p <- as.vector(tidy(lm(age ~ ia_base, timevarying_df)) %>% 
+  filter(term == "ia_base") %>% 
+  select(p.value) %>% 
+  round(., 3))
+
+# fill test of mean difference in age p value
+table1_matrix[2, 6] <- as.numeric(age_p)
+
+# create loop to calculate p values for binary variables
+# create vector of variables to loop
+var_loop <- c("age_bi", "sex", "race_bi", "educ", "inc", "py10", "se_bi", 
+              "omega3_bi", "multivits_bi", "rfneph", "crp", "ccp2")
+
+for(i in 1:length(var_loop)){
+  # create tab
+  tab <- xtabs(as.formula(paste0("~ia_base +", var_loop[i])),
+               data = timevarying_df)
+  
+  # perform fisher's exact test; will be approximate to chisq with 
+  # large enough sample size
+  fisher_p <- tidy(fisher.test(tab)) %>% select(p.value)
+  # fill in matrix
+  table1_matrix[i + 2, 6] <- round(as.numeric(fisher_p), 3)
+  
+}
+
+# convert table 1 matrix to dataframe
+table1_df <- data.frame(table1_matrix)
+
+knitr::kable(table1_df, caption = paste0("Table 1: Demographic and descriptive",
+  " characteristics of ACPA positive subjects by Inflammatory Arthritis", 
+  " (IA) status at baseline"))
+
+```
+
