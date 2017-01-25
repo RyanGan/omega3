@@ -49,17 +49,17 @@ colnames(table1_matrix) <- c("variable", "ia_yes_n", "ia_yes_perc",
 
 # fill column 1 with variable names
 table1_matrix[,1] <- c("n", "Age (Mean)", "Age > 50", "Female", 
-  "Non-Hispanic White","Education > HS", "Income > 40k", 
-  "Pack Years > 10", "SE+", "n-3 FA Supplement", "Multivitamin", 
-  "RF+", "CRP+", "CCP2+")
+  "Non-Hispanic White","Education > HS", "Income > 40k", "Pack Years > 10", 
+  "SE+", "n-3 FA Supplement", "Multivitamin", "RF+", "CRP+", "CCP2+")
 
+# code needs to account for missingness by specific variables (i.e. income) 
+# I have an na.omit function built in to the summary
 # calculate n
 tab1_n_df <- baseline_df %>% 
   group_by(ia_base) %>% # group by IA status
-  na.omit() %>% # removing missing
   summarise(n = n(), mean_age = n(), age50_n = sum(age_bi),
     female_n = sum(sex), nhw_n = sum(race_bi), ed_gt_hs_n = sum(educ),
-    income_gt_40k_n = sum(inc), pack_years_gt_10_n = sum(py10),
+    income_gt_40k_n = sum(na.omit(inc)), pack_years_gt_10_n = sum(py10),
     shared_epitope_pos_n = sum(se_bi), n3_supp_use_n = sum(omega3_bi),
     multi_vit_use_n = sum(multivits_bi), rf_pos_n = sum(rfneph),
     crp_pos_n = sum(crp), ccp2_pos_n = sum(ccp2)) 
@@ -71,7 +71,8 @@ tab1_perc_df <- baseline_df %>%
   na.omit() %>% # removing missing
   summarise(n = n(), mean_age = mean(age), age50_perc = sum(age_bi)/n,
     female_perc = sum(sex)/n, nhw_perc = sum(race_bi)/n, ed_gt_hs = sum(educ)/n,
-    income_gt_40k = sum(inc)/n, pack_years_gt_10 = sum(py10)/n,
+    income_gt_40k = sum(na.omit(inc))/length(na.omit(inc)),  # correctly calculates
+    pack_years_gt_10 = sum(py10)/n,
     shared_epitope_pos = sum(se_bi)/n, n3_supp_use = sum(omega3_bi)/n,
     multi_vit_use = sum(multivits_bi)/n, rf_pos = sum(rfneph)/n,
     crp_pos = sum(crp)/n, ccp2_pos = sum(ccp2)/n) %>% 
@@ -201,6 +202,9 @@ timevarying_df <- read_csv("incident_timevary.csv") %>%
   # code indicator of IA incident group at baseline
   mutate(incident_ia_base = ifelse(ia_cat == 2, 1, 0))
 
+# make a dataframe of baseline characteristics for IA group
+tv_base_df <- timevarying_df %>% filter(visit_num == 1)
+
 ```
 
 ### Descriptive Characteristics at Baseline Visit of IA Status (Table 3)
@@ -208,7 +212,7 @@ timevarying_df <- read_csv("incident_timevary.csv") %>%
 Calculate descriptive characteristics of incident IA dataframe by IA status at their baseline visit. I need to figure out how to handle correct income calculation in dataframe.
 
 ```{r table 3, message=F, warning=F}
-summary(timevarying_df)
+
 # create empty dataframe of table 1
 table3_matrix <- matrix(nrow = 14, ncol = 6, byrow = T)
 # define column names for matrix
@@ -222,13 +226,11 @@ table3_matrix[,1] <- c("n", "Age (Mean)", "Age > 50", "Female",
   "RF+", "CRP+", "CCP2+")
 
 # calculate n
-tab3_n_df <- timevarying_df %>% 
-  filter(visit_num == 1) %>% # subset by first visit
+tab3_n_df <- tv_base_df %>% 
   group_by(incident_ia_base) %>% # group by IA status
-  na.omit() %>% # removing missing
   summarise(n = n(), mean_age = n(), age50_n = sum(age_bi),
     female_n = sum(sex), nhw_n = sum(race_bi), ed_gt_hs_n = sum(educ),
-    income_gt_40k_n = sum(inc), pack_years_gt_10_n = sum(py10),
+    income_gt_40k_n = sum(na.omit(inc)), pack_years_gt_10_n = sum(py10),
     shared_epitope_pos_n = sum(se_bi), n3_supp_use_n = sum(omega3_bi),
     multi_vit_use_n = sum(multivits_bi), rf_pos_n = sum(rfneph),
     crp_pos_n = sum(crp), ccp2_pos_n = sum(ccp2)) 
@@ -243,10 +245,10 @@ tab3_perc_df <- timevarying_df %>%
   group_by(incident_ia_base) %>% # group by IA status
   summarise(n = n(), mean_age = mean(age), age50_perc = sum(age_bi)/n,
     female_perc = sum(sex)/n, nhw_perc = sum(race_bi)/n, ed_gt_hs = sum(educ)/n,
-    income_gt_40k = sum(inc)/n, pack_years_gt_10 = sum(py10)/n,
-    shared_epitope_pos = sum(se_bi)/n, n3_supp_use = sum(omega3_bi)/n,
-    multi_vit_use = sum(multivits_bi)/n, rf_pos = sum(rfneph)/n,
-    crp_pos = sum(crp)/n, ccp2_pos = sum(ccp2)/n) %>% 
+    income_gt_40k = sum(na.omit(inc))/length(na.omit(inc)), # handles missingness
+    pack_years_gt_10 = sum(py10)/n, shared_epitope_pos = sum(se_bi)/n, 
+    n3_supp_use = sum(omega3_bi)/n, multi_vit_use = sum(multivits_bi)/n, 
+    rf_pos = sum(rfneph)/n, crp_pos = sum(crp)/n, ccp2_pos = sum(ccp2)/n) %>% 
   round(., 2) # round to two digits
 
 # fill columns ----
@@ -265,40 +267,96 @@ table3_matrix[ ,5] <- as.numeric(as.vector(tab3_perc_df[1, 2:15]))
 Now I want to calculate test statistics for each row variable. As age is a continous variable, I test the differences between IA positive and IA negative at baseline using a t-test (in a linear model). For the 2x2 contingency table tests, I use Fisher's exact test as it should be approximate to Persons chi-squared for sufficiently large sample sizes.
 
 ```{r table 3 test statistcis, message=F, warning=F, results='asis'}
+
 # perform statistics and fill colum n 6 ----
 # calculate p value for test of mean differences
-age_p <- as.vector(tidy(lm(age ~ ia_base, timevarying_df)) %>% 
+age_p <- as.vector(tidy(lm(age ~ incident_ia_base, tv_base_df)) %>% 
   filter(term == "ia_base") %>% 
   select(p.value) %>% 
   round(., 3))
 
 # fill test of mean difference in age p value
-table1_matrix[2, 6] <- as.numeric(age_p)
+table3_matrix[2, 6] <- as.numeric(age_p)
 
 # create loop to calculate p values for binary variables
 # create vector of variables to loop
 var_loop <- c("age_bi", "sex", "race_bi", "educ", "inc", "py10", "se_bi", 
               "omega3_bi", "multivits_bi", "rfneph", "crp", "ccp2")
 
+
 for(i in 1:length(var_loop)){
   # create tab
-  tab <- xtabs(as.formula(paste0("~ia_base +", var_loop[i])),
-               data = timevarying_df)
+  tab <- xtabs(as.formula(paste0("~incident_ia_base +", var_loop[i])),
+               data = tv_base_df)
   
   # perform fisher's exact test; will be approximate to chisq with 
   # large enough sample size
   fisher_p <- tidy(fisher.test(tab)) %>% select(p.value)
   # fill in matrix
-  table1_matrix[i + 2, 6] <- round(as.numeric(fisher_p), 3)
+  table3_matrix[i + 2, 6] <- round(as.numeric(fisher_p), 3)
   
 }
 
 # convert table 1 matrix to dataframe
-table1_df <- data.frame(table1_matrix)
+table3_df <- data.frame(table3_matrix)
 
-knitr::kable(table1_df, caption = paste0("Table 1: Demographic and descriptive",
+knitr::kable(table3_df, caption = paste0("Table 1: Demographic and descriptive",
   " characteristics of ACPA positive subjects by Inflammatory Arthritis", 
   " (IA) status at baseline"))
 
 ```
 
+### Association Between n-3 FA % in RBCs and Incident IA (Table 4)
+
+Time-varying survival model that allows n-3 FA measure at each visit to contribute in the calculation of relative risk (hazard ratio; instantaenous risk of event).
+
+```{r timevary regression loop, message=F, warning=F, results='asis'}
+# create empty matrix for table
+tab4_matrix <- matrix(nrow = 6, ncol = 5 )
+# column names of tables
+colnames(tab4_matrix) <- c("n3_FA_RBC", "HR", "Lower_95_CI",
+                           "Upper_95_CI", "p_value") 
+# variables to loop through
+n3_vars <- c("sd_ala", "sd_epa", "sd_dpa", "sd_dha", "sd_epa_dha",
+             "sd_total_n3")
+
+# fill first column of matrix with n3 vars
+tab4_matrix[,1] <- c("ALA", "EPA", "DPA", "DHA", "EPA+DHA",
+                     "Total n-3 FA")
+
+# Iteration of time varying model through n-3 FAs
+for(i in 1:length(n3_vars)){
+
+  # general logistc regression; using tidy from broom to output 
+  # coeffecients
+  tv_surv_mod <- tidy(coxph(as.formula(
+    # formula for loop
+    paste0("Surv(t1, t2, ia ==1) ~", 
+    paste(n3_vars[i], "omega3_bi", "age_base_bi", "rfneph", 
+    "crp", "ccp2", "se_bi", sep = "+"))),
+    data = timevarying_df)) 
+  
+tv_surv_mod
+  
+  # calculate hazard ratio and 95% CI
+  hazard_ratio <- tv_surv_mod %>% filter(term == n3_vars[i]) %>% 
+    # select terms to keep
+    select(term, estimate, conf.low, conf.high, p.value)
+
+  # fill ith row of table 2
+  tab4_matrix[i,2:4] <- round(as.numeric(exp(hazard_ratio[1, 2:4])),2)
+  tab4_matrix[i,5] <- round(as.numeric(hazard_ratio[1,5]),2)
+
+}
+
+# create table of logistic values
+# convert table 1 matrix to dataframe
+table4_df <- data.frame(tab4_matrix)
+
+
+knitr::kable(table4_df, caption = paste0("Table 4: Association between increase in n-3",
+  " fatty acid % in red blood cells (RBC) and incident inflammatory arthritis (IA) in ACPA",
+  " positive subjects"))
+```
+
+I'll write some stuff in later....
