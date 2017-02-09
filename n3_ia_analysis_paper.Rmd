@@ -357,6 +357,8 @@ table4_df <- data.frame(tab4_matrix)
 knitr::kable(table4_df, caption = paste0("Table 4: Association between increase in n-3",
   " fatty acid % in red blood cells (RBC) and incident inflammatory arthritis (IA) in ACPA",
   " positive subjects"))
+
+
 ```
 
 I'll write some stuff in later....
