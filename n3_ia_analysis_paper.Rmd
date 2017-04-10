@@ -10,7 +10,7 @@ output: html_document
 This document contains the code used to produce the results for the paper, *The association between omega-3 fatty acid biomarkers and inflammatory arthritis in an at-risk population positive for anti-citrullinated protein antibodies.*
 
 Calling libraries used for data manipulation and analysis.
-```{r libraries, message=F, warning=F}
+```{r libraries, echo=F, message=F, warning=F}
 
 library(tidyverse) # data wrangling 
 library(broom) # analysis object to tidy dataframe
@@ -27,7 +27,7 @@ Code and results for the cross-sectional analysis of baseline inflammatory arthr
 
 Reading baseline dataframe Elizabeth provided. There are 52 observations with 56 variables. Elizabeth limited dataframe to relevant variables and imputed some missing variables based on prior observations on the same subject.
 
-```{r read baseline dataframe, message=F, warning=F}
+```{r read baseline dataframe, echo=F, message=F, warning=F}
 
 # reading baseline data
 baseline_df <- read_csv("baseline.csv") %>% 
@@ -39,7 +39,7 @@ baseline_df <- read_csv("baseline.csv") %>%
 
 Creating Table 1 of descriptive characteristics by baseline IA status. First step is creating an empty matrix and calculating cell values for each variable.
 
-```{r table 1, message=F, warning=F, results='asis'}
+```{r table 1, echo=F, message=F, warning=F, results='asis'}
 
 # create empty dataframe of table 1
 table1_matrix <- matrix(nrow = 14, ncol = 8, byrow = T)
@@ -129,7 +129,7 @@ Table 1 suggests a significant difference in proportions in the IA yes vs IA no 
 
 The following code contains logistic regression models for each n-3 FA % in RBCs biomarker. n-3 FA % in RBC biomarkers are: ALA, EPA, DPA, DHA, EPA+DHA, and ALA+EPA+DPA+DHA = Total n-3 FA. n-3 FA % in RBC variables were standardized, where the standard deviation of each n-3 FA distribution was divide from the distribution to allow for a "1 SD increase"" interpreation across all n-3 FA variables. Adjustment variables were based on confounding variables for variables associated with IA either in the baseline visit in the cross-sectional analysis or the baseline visit in the incidence study. 
 
-```{r logistic regression loop, message=F, warning=F, results='asis'}
+```{r logistic regression loop, echo=F, message=F, warning=F, results='asis'}
 # create empty matrix for table
 tab2_matrix <- matrix(nrow = 6, ncol = 5 )
 # column names of tables
@@ -168,7 +168,7 @@ for(i in 1:length(n3_vars)){
 # create table of logistic values
 # convert table 1 matrix to dataframe
 table2_df <- as.data.frame(tab2_matrix)
-summary(table2_df)
+
 knitr::kable(table2_df, caption = paste0("Table 2: Association between n-3",
   " fatty % in red blood cells (RBC) and inflammatory arthritis (IA) in ACPA",
   " positive subjects at baseline visit."))
@@ -180,52 +180,29 @@ Increasing DPA, EPA+DHA, and Total n-3 FAs were significantly associated with a 
 
 ### Plot of Table 2
 
-Figure representation of table 2.
+Figure representation of table 2. Extreme confidence intervals make the scale of this plot a little crazy.
 
-```{r alternate figure 2,message=F, warning=F, results='asis'}
+```{r alternate figure 2, echo=F, message=F, warning=F, results='asis'}
 # convert to numeric
 or_df <- tab2_matrix %>% as_data_frame() %>% 
   mutate(OR = as.numeric(OR), Lower_95_CI = as.numeric(Lower_95_CI),
          Upper_95_CI = as.numeric(Upper_95_CI), p_value = as.numeric(p_value))
-summary
+
 
 or_fig <- ggplot(or_df, aes(x = n3_FA_RBC, y = OR)) +
-  geom_point() +
-  geom_errorbar(aes(ymin = Lower_95_CI, ymax = Upper_95_CI)) +
-  scale_y_log10() +
-    # plot theme
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = Lower_95_CI, ymax = Upper_95_CI),
+                width = 0.15) +
+  scale_y_log10(breaks = c(0.01, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5)) +
+  geom_hline(yintercept = 1, linetype=2) +
+  ylab('Odds Ratio for 1 Standard Deviation Increase') +
+  xlab('Omega-3 Fatty Acid') +
+  # plot theme
   theme(panel.background = element_rect(fill = 'white', colour = 'black'),
   panel.grid.major = element_blank(),
   panel.grid.minor = element_blank())
-or_fig
-scale_y
 
-print_plot <- ggplot(combined_point_est_df, 
-                       aes(x = pm_method, y = odds_ratio, colour = pm_method)) +
-    geom_point() + #geom_text(vjust = 0, nudge_x = 0.3) +
-    geom_errorbar(aes(ymin=lower95, ymax=upper95), width = 0.2) +
-    facet_wrap(~outcome, nrow = 3) +
-    geom_hline(yintercept = 1, linetype=2) +
-    #ggtitle('County-Level: Association Between PM2.5 \n from Wildfire Smoke on Hospitalizations') +
-    ylab('Odds Ratio for 10µg/m^3 Increase in PM2.5') +
-    xlab('Time-Stratified Within July to October Fire Season') +
-    # plot theme
-    theme(panel.background = element_rect(fill = 'white', colour = 'black'),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    # strip element
-    strip.background = element_rect(colour=NA, fill=NA),
-    panel.border = element_rect(fill = NA, color = "black"),
-    # facet text size
-    strip.text = element_text(size = 7),
-    legend.text = element_text(size = 7),
-    # axis element
-    axis.text.x = element_blank(),
-    axis.title.y = element_text(angle = 90))
-
-  print(print_plot)
-    
-
+print(or_fig)
 ```
 
 ## Incident IA Time-Varying Analysis
@@ -236,7 +213,7 @@ Fill in descriptions of time-varying approach to analyze incident IA.
 
 Read in time-varying incident IA dataframe created by Elizabeth..
 
-```{r read incident dataframe, message=F, warning=F}
+```{r read incident dataframe, echo=F, message=F, warning=F}
 
 # reading baseline data
 timevarying_df <- read_csv("incident_timevary.csv") %>% 
@@ -253,7 +230,7 @@ tv_base_df <- timevarying_df %>% filter(visit_num == 1)
 
 Calculate descriptive characteristics of incident IA dataframe by IA status at their baseline visit. I need to figure out how to handle correct income calculation in dataframe.
 
-```{r table 3, message=F, warning=F}
+```{r table 3, echo=F, message=F, warning=F}
 
 # create empty dataframe of table 1
 table3_matrix <- matrix(nrow = 14, ncol = 8, byrow = T)
@@ -339,9 +316,11 @@ knitr::kable(table3_df, caption = paste0("Table 3: Demographic and descriptive",
 
 ### Association Between n-3 FA % in RBCs and Incident IA (Table 4)
 
-Time-varying survival model that allows n-3 FA measure at each visit to contribute in the calculation of relative risk (hazard ratio; instantaenous risk of event).
+Time-varying survival model that allows n-3 FA measure at each visit to contribute in the calculation of relative risk (hazard ratio; instantaenous risk of event). 
 
-```{r timevary regression loop, message=F, warning=F, results='asis'}
+Have Elizabeth check to make sure I used the right n-3 FA standardized predictor. I have a feeling this might have changed when she updated the dataframe.
+
+```{r timevary regression loop, echo=F, message=F, warning=F, results='asis'}
 # create empty matrix for table
 tab4_matrix <- matrix(nrow = 6, ncol = 5 )
 # column names of tables
@@ -387,7 +366,63 @@ table4_df <- data.frame(tab4_matrix)
 knitr::kable(table4_df, caption = paste0("Table 4: Association between increase in n-3",
   " fatty acid % in red blood cells (RBC) and incident inflammatory arthritis (IA) in ACPA",
   " positive subjects"))
-
-
 ```
 
+### Plot of Table 4
+
+Figure representation of table 4.
+
+```{r hazard ratio plot, echo=F, message=F, warning=F, results='asis'}
+# convert to numeric
+hr_df <- tab4_matrix %>% as_data_frame() %>% 
+  mutate(HR = as.numeric(HR), Lower_95_CI = as.numeric(Lower_95_CI),
+         Upper_95_CI = as.numeric(Upper_95_CI), p_value = as.numeric(p_value))
+
+
+hr_fig <- ggplot(hr_df, aes(x = n3_FA_RBC, y = HR)) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = Lower_95_CI, ymax = Upper_95_CI),
+                width = 0.15) +
+  scale_y_log10(limits = c(0.1, 10), breaks = c(0.1, 0.25, 0.5, 0.75, 1, 1.75,
+                                                2.5, 5.0, 10)) +
+  geom_hline(yintercept = 1, linetype=2) +
+  ylab('Hazard Ratio for 1 Standard Deviation Increase') +
+  xlab('Omega-3 Fatty Acid') +
+  # plot theme
+  theme(panel.background = element_rect(fill = 'white', colour = 'black'),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank())
+
+print(hr_fig)
+```
+
+
+### Figure of n-3 FA Over Time
+
+Kevin asked for a figure of n-3 FA levels over time. I'll see if this works. I think I'll go with a small-multiples figure by omega-3 FA.
+
+First step is to get data in order for plotting over time. I need it in long form where there is a patient identifier, time in study, indicator if developed IA or no, omega of interest, and value.
+
+```{r n3 over time wrangle, echo=F, message=F, warning=F, results='asis'}
+
+n3_time_plot <- timevarying_df %>%
+  # limit to variables I need
+  select(id, years_contributed, incident_ia_base, total_n3,
+         ala, epa, dpa, dha, epa_dha) %>% 
+  # use gather function to make a new var called omega
+  gather(omega, perc_in_rbc, -years_contributed, -id, -incident_ia_base) %>% 
+  mutate(id = as.factor(id), incident_ia_base = as.factor(incident_ia_base))
+
+
+# plot
+n3_plot <-ggplot(n3_time_plot, aes(x=years_contributed, y = perc_in_rbc, 
+  colour = incident_ia_base, group = interaction(id, incident_ia_base))) +
+  geom_line() +
+  facet_wrap(~omega,scales = "free") +
+  theme_bw()
+
+print(n3_plot)
+  
+```
+
+These figures don't really help. I think the individual levels jump around too much.
