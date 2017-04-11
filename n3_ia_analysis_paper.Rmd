@@ -40,17 +40,18 @@ baseline_df <- read_csv("baseline.csv") %>%
 Creating Table 1 of descriptive characteristics by baseline IA status. First step is creating an empty matrix and calculating cell values for each variable.
 
 ```{r table 1, echo=F, message=F, warning=F, results='asis'}
-
+glimpse(baseline_df)
 # create empty dataframe of table 1
-table1_matrix <- matrix(nrow = 14, ncol = 8, byrow = T)
+table1_matrix <- matrix(nrow = 16, ncol = 8, byrow = T)
 # define column names for matrix
 colnames(table1_matrix) <- c("variable", "ia_yes_n", "ia_yes_val", "ia_yes_parenth",
                              "ia_no_n", "ia_no_val", "ia_no_parenth", "p_val")
 
 # fill column 1 with variable names
 table1_matrix[,1] <- c("n", "Age (Mean)", "Age > 50 %", "Female %", 
-  "Non-Hispanic White %","Education > HS %", "Income > 40k %", "Pack Years > 10 %", 
-  "SE+ %", "n-3 FA Supplement %", "Multivitamin %", "RF+ %", "CRP+ %", "CCP2+ %")
+  "Non-Hispanic White %","Education > HS %", "Income > 40k %", "Ever Smoke",
+  "Current Smoker", "Pack Years > 10 %", "SE+ %", "n-3 FA Supplement %", 
+  "Multivitamin %", "RF+ %", "CRP+ %", "CCP2+ %")
 
 #Now I want to calculate test statistics for each row variable. 
 # As age is a continous variable, I test the differences between IA positive and 
@@ -80,8 +81,9 @@ table1_matrix[2, 8] <- as.numeric(age_p)
 
 # create loop to calculate p values for binary variables
 # create vector of variables to loop
-var_loop <- c("age_bi", "sex", "race_bi", "educ", "inc", "py10", "se_bi", 
-              "omega3_bi", "multivits_bi", "rfneph", "crp", "ccp2")
+var_loop <- c("age_bi", "sex", "race_bi", "educ", "inc", "eversmoke",
+              "cursmoke", "py10", "se_bi", "omega3_bi", "multivits_bi", 
+              "rfneph", "crp", "ccp2")
 
 for(i in 1:length(var_loop)){
 
@@ -120,7 +122,7 @@ table1_df <- data.frame(table1_matrix)
 knitr::kable(table1_df, caption = paste0("Table 1: Demographic and descriptive",
   " characteristics of ACPA positive subjects by Inflammatory Arthritis", 
   " (IA) status at baseline"))
-
+?map
 ```
 
 Table 1 suggests a significant difference in proportions in the IA yes vs IA no group for n-3 FA supplement use, RF positivity, and CRP positivity.
@@ -136,8 +138,8 @@ tab2_matrix <- matrix(nrow = 6, ncol = 5 )
 colnames(tab2_matrix) <- c("n3_FA_RBC", "OR", "Lower_95_CI",
                            "Upper_95_CI", "p_value") 
 # variables to loop through
-n3_vars <- c("sd_ala", "sd_epa", "sd_dpa", "sd_dha", "sd_epa_dha",
-             "sd_total_n3")
+n3_vars <- c("sd_ALA_update", "sd_EPA_update", "sd_dpa_update", 
+             "sd_DHA_update", "sd_epa_dha_update", "sd_total_n3_update")
 
 # fill first column of matrix with n3 vars
 tab2_matrix[,1] <- c("ALA", "EPA", "DPA", "DHA", "EPA+DHA",
@@ -233,15 +235,16 @@ Calculate descriptive characteristics of incident IA dataframe by IA status at t
 ```{r table 3, echo=F, message=F, warning=F}
 
 # create empty dataframe of table 1
-table3_matrix <- matrix(nrow = 14, ncol = 8, byrow = T)
+table3_matrix <- matrix(nrow = 16, ncol = 8, byrow = T)
 # define column names for matrix
 colnames(table3_matrix) <- c("variable", "ia_yes_n", "ia_yes_val", "ia_yes_parenth",
                              "ia_no_n", "ia_no_val", "ia_no_parenth", "p_val")
 
 # fill column 1 with variable names
 table3_matrix[,1] <- c("n", "Age (Mean)", "Age > 50 %", "Female %", 
-  "Non-Hispanic White %","Education > HS %", "Income > 40k %", "Pack Years > 10 %", 
-  "SE+ %", "n-3 FA Supplement %", "Multivitamin %", "RF+ %", "CRP+ %", "CCP2+ %")
+  "Non-Hispanic White %","Education > HS %", "Income > 40k %", "Ever Smoke",
+  "Current Smoker", "Pack Years > 10 %", "SE+ %", "n-3 FA Supplement %", 
+  "Multivitamin %", "RF+ %", "CRP+ %", "CCP2+ %")
 
 #Now I want to calculate test statistics for each row variable. 
 # As age is a continous variable, I test the differences between IA positive and 
@@ -271,8 +274,8 @@ table3_matrix[2, 8] <- as.numeric(age_p)
 
 # create loop to calculate p values for binary variables
 # create vector of variables to loop
-var_loop <- c("age_bi", "sex", "race_bi", "educ", "inc", "py10", "se_bi", 
-              "omega3_bi", "multivits_bi", "rfneph", "crp", "ccp2")
+var_loop <- c("age_bi", "sex", "race_bi", "educ", "inc", "eversmoke", "cursmoke",
+              "py10", "se_bi", "omega3_bi", "multivits_bi", "rfneph", "crp", "ccp2")
 
 for(i in 1:length(var_loop)){
 
@@ -327,8 +330,8 @@ tab4_matrix <- matrix(nrow = 6, ncol = 5 )
 colnames(tab4_matrix) <- c("n3_FA_RBC", "HR", "Lower_95_CI",
                            "Upper_95_CI", "p_value") 
 # variables to loop through
-n3_vars <- c("sd_ala", "sd_epa", "sd_dpa", "sd_dha", "sd_epa_dha",
-             "sd_total_n3")
+n3_vars <- c("sd_ala_update", "sd_epa_update", "sd_dpa_update", "sd_dha_update",
+             "sd_epa_dha_update", "sd_total_n3_update")
 
 # fill first column of matrix with n3 vars
 tab4_matrix[,1] <- c("ALA", "EPA", "DPA", "DHA", "EPA+DHA",
