@@ -40,7 +40,7 @@ baseline_df <- read_csv("baseline.csv") %>%
 Creating Table 1 of descriptive characteristics by baseline IA status. First step is creating an empty matrix and calculating cell values for each variable.
 
 ```{r table 1, echo=F, message=F, warning=F, results='asis'}
-glimpse(baseline_df)
+
 # create empty dataframe of table 1
 table1_matrix <- matrix(nrow = 16, ncol = 8, byrow = T)
 # define column names for matrix
@@ -122,7 +122,7 @@ table1_df <- data.frame(table1_matrix)
 knitr::kable(table1_df, caption = paste0("Table 1: Demographic and descriptive",
   " characteristics of ACPA positive subjects by Inflammatory Arthritis", 
   " (IA) status at baseline"))
-?map
+
 ```
 
 Table 1 suggests a significant difference in proportions in the IA yes vs IA no group for n-3 FA supplement use, RF positivity, and CRP positivity.
