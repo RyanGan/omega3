@@ -406,6 +406,10 @@ Kevin asked for a figure of n-3 FA levels over time. I'll see if this works. I t
 
 First step is to get data in order for plotting over time. I need it in long form where there is a patient identifier, time in study, indicator if developed IA or no, omega of interest, and value.
 
+The following figures show each subject's individual levels of n-3 FA over the study period, and is color-coded by whether they developed incident IA or not. The thicker lines are the fitted smooth splines for each group that sort of characterize the 'average' group effect over time. I do not show the error bars around the splines because there is way too much error. You would not be able to statistically tell if they are different from each other at any point. But maybe this helps to visualize trends over time.
+
+#### Absolute n-3 Levels 
+
 ```{r n3 over time wrangle, echo=F, message=F, warning=F, results='asis'}
 
 n3_time_plot <- timevarying_df %>%
@@ -414,18 +418,165 @@ n3_time_plot <- timevarying_df %>%
          ala, epa, dpa, dha, epa_dha) %>% 
   # use gather function to make a new var called omega
   gather(omega, perc_in_rbc, -years_contributed, -id, -incident_ia_base) %>% 
-  mutate(id = as.factor(id), incident_ia_base = as.factor(incident_ia_base))
+  mutate(id = as.factor(id), incident_ia_base = as.factor(incident_ia_base))  
 
 
 # plot
 n3_plot <-ggplot(n3_time_plot, aes(x=years_contributed, y = perc_in_rbc, 
   colour = incident_ia_base, group = interaction(id, incident_ia_base))) +
-  geom_line() +
+  geom_line(linetype = 2) +
+  geom_smooth(aes(group = incident_ia_base), se = F) +
   facet_wrap(~omega,scales = "free") +
   theme_bw()
 
 print(n3_plot)
-  
+
 ```
 
-These figures don't really help. I think the individual levels jump around too much.
+These figures of the absolute levels don't really help. I think the individual levels jump around too much.
+
+#### n-3 FA Change Visit to Visit
+
+We could also look at change in n-3 FA levels from one visit to the next in a similar fashion.
+
+```{r n3 chg plot, echo=F, message=F, warning=F, results='asis'}  
+# change in n3 over time
+n3_chg_plot <- timevarying_df %>%
+  # limit to variables I need
+  select(id, years_contributed, incident_ia_base, total_n3,
+         ala, epa, dpa, dha, epa_dha) %>% 
+  # calculate chang in n3
+  group_by(id) %>% 
+  mutate(total_n3_chg = total_n3 - lag(total_n3, order_by = id),
+         ala_chg = ala - lag(ala, order_by = id),
+         epa_chg = epa - lag(epa, order_by = id),
+         dpa_chg = dpa - lag(dpa, order_by = id),
+         dha_chg = dha - lag(dha, order_by = id),
+         epa_dha_chg = epa_dha - lag(epa_dha, order_by = id)) %>% 
+  ungroup() %>% 
+  # limit to change variables
+  select(-total_n3, -ala, -epa, -dpa, -dha, -epa_dha) %>% 
+  # use gather function to make a new var called omega
+  gather(omega, chg_n3, -years_contributed, -id, -incident_ia_base) %>% 
+  mutate(id = as.factor(id), incident_ia_base = as.factor(incident_ia_base),
+         chg_n3 = ifelse(is.na(chg_n3), 0, chg_n3)) 
+
+# plot
+n3_plot <-ggplot(n3_chg_plot, aes(x=years_contributed, y = chg_n3, 
+  colour = incident_ia_base, group = interaction(id, incident_ia_base))) +
+  geom_line(linetype = 2) +
+  geom_smooth(aes(group = incident_ia_base), se = F) +
+  facet_wrap(~omega,scales = "free") +
+  theme_bw()
+
+print(n3_plot)
+```
+
+These plots don't seem that helpful either, but it may suggest the people that didn't develop IA had relatively more stable n-3 FA levels over the time period. Spline for IA positive group may be a little questionable past 3 years since it's one subject driving the spline fit.
+
+#### n-3 FA Change Since Baseline Visit
+
+Last small multiples plot of n-3 FA change over time subtracts the baseline value of n-3 FA for each subject.
+
+```{r n3 change since baseline vis, echo=F, message=F, warning=F, results='asis'}
+# find baseline n3 vals
+n3_base <- timevarying_df %>%
+  # limit to variables I need
+  select(id, total_n3, ala, epa, dpa, dha, epa_dha) %>% 
+  # calculate chang in n3
+  group_by(id) %>% 
+  filter(row_number()==1) %>% 
+  rename(base_tot_n3 = total_n3, base_ala = ala, base_epa = epa,
+         base_dpa = dpa, base_dha = dha, base_epa_dha = epa_dha)
+
+# dataset of differences since baseline visits
+n3_chg_plot <- timevarying_df %>%
+  # limit to variables I need
+  select(id, years_contributed, incident_ia_base,
+         total_n3, ala, epa, dpa, dha, epa_dha) %>% 
+  # merge base values in
+  right_join(n3_base, by = "id") %>% 
+  # calculate chang in n3
+  group_by(id) %>% 
+  mutate(total_n3_chg = total_n3 - base_tot_n3,
+         ala_chg = ala - base_ala,
+         epa_chg = epa - base_epa,
+         dpa_chg = dpa - base_dpa,
+         dha_chg = dha - base_dha,
+         epa_dha_chg = epa_dha - base_epa_dha) %>% 
+  ungroup() %>% 
+  # limit to change variables
+  select(id, years_contributed, incident_ia_base, total_n3_chg,
+         ala_chg, epa_chg, dpa_chg, dha_chg, epa_dha_chg) %>% 
+  # use gather function to make a new var called omega
+  gather(omega, chg_n3, -years_contributed, -id, -incident_ia_base) %>% 
+  mutate(id = as.factor(id), incident_ia_base = as.factor(incident_ia_base),
+         chg_n3 = ifelse(is.na(chg_n3), 0, chg_n3)) 
+
+# plot
+n3_plot <-ggplot(n3_chg_plot, aes(x=years_contributed, y = chg_n3, 
+  colour = incident_ia_base, group = interaction(id, incident_ia_base))) +
+  geom_line(linetype = 2) +
+  geom_smooth(aes(group = incident_ia_base), se = F) +
+  facet_wrap(~omega,scales = "free") +
+  theme_bw()
+
+print(n3_plot)
+
+```
+
+Again, I don't think there is a clear pattern here. You may conclude that those without incident IA may have relatively more stable n-3 FA levels over the study period. 
+
+
+## Alternate Results Adjusting for Current Smoking Instead of PY10
+
+Kevin is interested in controlling for the biologically/clinically more relevant smoking variable, "current smoker". 
+
+### Baseline Results Adjusting for Current Smoker (Alt Table 2)
+
+```{r alt logistic regression loop, echo=F, message=F, warning=F, results='asis'}
+# create empty matrix for table
+tab2_matrix <- matrix(nrow = 6, ncol = 5 )
+# column names of tables
+colnames(tab2_matrix) <- c("n3_FA_RBC", "OR", "Lower_95_CI",
+                           "Upper_95_CI", "p_value") 
+# variables to loop through
+n3_vars <- c("sd_ALA_update", "sd_EPA_update", "sd_dpa_update", 
+             "sd_DHA_update", "sd_epa_dha_update", "sd_total_n3_update")
+
+# fill first column of matrix with n3 vars
+tab2_matrix[,1] <- c("ALA", "EPA", "DPA", "DHA", "EPA+DHA",
+                     "Total n-3 FA")
+
+# Iteration of logistic regression through n-3 FAs
+for(i in 1:length(n3_vars)){
+  # general logistc regression; using tidy from broom to output 
+  # coeffecients
+  log_reg_mod <- tidy(glm(as.formula(paste0("ia_base ~", 
+                    paste(n3_vars[i], "omega3_bi", "cursmoke", "rfneph", 
+                          "crp", "se_bi", sep = "+"))),
+                    data = baseline_df, family = "binomial"(link="logit"))) 
+  
+  # calculate odds ratio and 95% CI
+  odds_ratio <- log_reg_mod %>% filter(term == n3_vars[i]) %>% 
+    # estimate lower and upper 95% CI bounds
+    mutate(lower_bound = estimate - (1.96*std.error),
+           upper_bound = estimate + (1.96*std.error)) %>% 
+    select(term, estimate, lower_bound, upper_bound, p.value)
+
+  # fill ith row of table 2
+  tab2_matrix[i,2:4] <- round(as.numeric(exp(odds_ratio[1, 2:4])),2)
+  tab2_matrix[i,5] <- round(as.numeric(odds_ratio[1,5]),2)
+
+}
+
+# create table of logistic values
+# convert table 1 matrix to dataframe
+table2_df <- as.data.frame(tab2_matrix)
+
+knitr::kable(table2_df, caption = paste0("Alt Table 2: Association between n-3",
+  " fatty % in red blood cells (RBC) and inflammatory arthritis (IA) in ACPA",
+  " positive subjects at baseline visit. Adjusting for current smoking rather than py10."))
+```
+
+Kevin, I thought a smoking variable was in our current incident model. I misunderstood the question you were answering. I'll adjust for current smoker in the baseline tables instead.
