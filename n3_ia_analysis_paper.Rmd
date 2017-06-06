@@ -580,3 +580,118 @@ knitr::kable(table2_df, caption = paste0("Alt Table 2: Association between n-3",
 ```
 
 Kevin, I thought a smoking variable was in our current incident model. I misunderstood the question you were answering. I'll adjust for current smoker in the baseline tables instead.
+
+
+#### Supplemental Analyses of Association Between Levels and Supplement Use
+
+```{r n3 rbc base, echo=F, message=F, warning=F, results='asis'}
+
+# create empty matrix for table
+sup_tab_matrix <- matrix(nrow = 6, ncol = 6)
+# column names of tables
+colnames(sup_tab_matrix) <- c("n3_FA_RBC", "n3_sup_yes", "n3_sup_no",
+                              "n3_diff", "stderr", "p_value") 
+# variables to loop through
+n3_vars <- c("ala", "epa", "dpa", "dha", "epa_dha", "total_n3")
+
+# fill first column of matrix with n3 vars
+sup_tab_matrix[,1] <- c("ALA", "EPA", "DPA", "DHA", "EPA+DHA",
+                     "Total n-3 FA")
+
+# loop through and calculate difference in supp vs non-supp at base
+for(i in 1:length(n3_vars)){
+
+  lin_mod <- tidy(lm(as.formula(paste0(n3_vars[i], "~omega3_bi")), baseline_df))  
+
+  # fill matrix
+  sup_tab_matrix[i,2] <- round(lin_mod[1,2]+lin_mod[2,2],3)
+  sup_tab_matrix[i,3] <- round(lin_mod[1,2],3)
+  sup_tab_matrix[i,4] <- round(lin_mod[2,2],3)
+  sup_tab_matrix[i,5] <- round(lin_mod[2,3],3)
+  sup_tab_matrix[i,6] <- round(lin_mod[2,5],3)
+
+}
+
+# create table 
+n3_lvl_base_df <- as.data.frame(sup_tab_matrix)
+
+knitr::kable(n3_lvl_base_df, caption = paste0("Supplemental Table:",
+  "Levels of n-3 FA % in RBCs in n-3 FA supplement users vs non-users at baseline"))
+
+```
+
+
+
+```{r n3 rbc tv, echo=F, message=F, warning=F, results='asis'}
+
+# create empty matrix for table
+sup_tab_matrix <- matrix(nrow = 6, ncol = 6)
+# column names of tables
+colnames(sup_tab_matrix) <- c("n3_FA_RBC", "n3_sup_yes", "n3_sup_no",
+                              "n3_diff", "stderr", "p_value") 
+# variables to loop through
+n3_vars <- c("ala", "epa", "dpa", "dha", "epa_dha", "total_n3")
+
+# fill first column of matrix with n3 vars
+sup_tab_matrix[,1] <- c("ALA", "EPA", "DPA", "DHA", "EPA+DHA",
+                     "Total n-3 FA")
+
+# loop through and calculate difference in supp vs non-supp at base
+for(i in 1:length(n3_vars)){
+
+  lin_mod <- tidy(lm(as.formula(paste0(n3_vars[i], "~omega3_bi")), tv_base_df))  
+
+  # fill matrix
+  sup_tab_matrix[i,2] <- round(lin_mod[1,2]+lin_mod[2,2],3)
+  sup_tab_matrix[i,3] <- round(lin_mod[1,2],3)
+  sup_tab_matrix[i,4] <- round(lin_mod[2,2],3)
+  sup_tab_matrix[i,5] <- round(lin_mod[2,3],3)
+  sup_tab_matrix[i,6] <- round(lin_mod[2,5],3)
+
+}
+
+# create table 
+n3_lvl_base_df <- as.data.frame(sup_tab_matrix)
+
+knitr::kable(n3_lvl_base_df, caption = paste0("Supplemental Table:",
+  "Levels of n-3 FA % in RBCs in n-3 FA supplement users vs non-users timevarying",
+  " at base"))
+
+```
+
+Reviewer question about association between n-3 FA and SE status. Looking only in baseline dataframe as it's the largest and IA status does not change.
+
+```{r n3 rbc base se, echo=F, message=F, warning=F, results='asis'}
+
+# create empty matrix for table
+se_tab_matrix <- matrix(nrow = 6, ncol = 6)
+# column names of tables
+colnames(se_tab_matrix) <- c("n3_FA_RBC", "se_pos", "se_neg",
+                              "n3_diff", "stderr", "p_value") 
+# variables to loop through
+n3_vars <- c("ala", "epa", "dpa", "dha", "epa_dha", "total_n3")
+
+# fill first column of matrix with n3 vars
+se_tab_matrix[,1] <- c("ALA", "EPA", "DPA", "DHA", "EPA+DHA",
+                     "Total n-3 FA")
+
+# loop through and calculate difference in supp vs non-supp at base
+for(i in 1:length(n3_vars)){
+
+  lin_mod <- tidy(lm(as.formula(paste0(n3_vars[i], "~se_bi")), baseline_df))  
+
+  # fill matrix
+  se_tab_matrix[i,2] <- round(lin_mod[1,2]+lin_mod[2,2],3)
+  se_tab_matrix[i,3] <- round(lin_mod[1,2],3)
+  se_tab_matrix[i,4] <- round(lin_mod[2,2],3)
+  se_tab_matrix[i,5] <- round(lin_mod[2,3],3)
+  se_tab_matrix[i,6] <- round(lin_mod[2,5],3)
+}
+
+# create table 
+n3_lvl_base_df <- as.data.frame(se_tab_matrix)
+
+knitr::kable(n3_lvl_base_df, caption = paste0("Supplemental Table:",
+  "Levels of n-3 FA % in RBCs by SE status at baseline"))
+
+```
