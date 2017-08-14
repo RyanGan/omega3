@@ -1,0 +1,148 @@
+---
+title: "Adjustment for Omega-3 Supplements in Incident IA Model"
+author: "Ryan Gan"
+date: "8/14/2017"
+output: html_document
+---
+
+
+```{r libraries, echo=F, message=F, warning=F}
+library(tidyverse) # data wrangling 
+library(broom) # analysis object to tidy dataframe
+library(survival) # time-varying model
+```
+
+```{r read incident dataframe, echo=F, message=F, warning=F}
+# reading baseline data
+timevarying_df <- read_csv("incident_timevary.csv") %>% 
+  rename(visit_num = visit_) %>% 
+  # code indicator of IA incident group at baseline
+  mutate(incident_ia_base = ifelse(ia_cat == 2, 1, 0))
+
+# make a dataframe of baseline characteristics for IA group
+tv_base_df <- timevarying_df %>% filter(visit_num == 1)
+```
+
+This R markdown file addresses the Associate Editor's query:
+
+> I would like to return to one the questions raised by the previous reviewer concerning the adjustment for supplement use, with the potential for over-adjustment. As you have described, the measured blood biomarker is the critical measurement. However, the statistical adjustment in your model could modulate the magnitude of the biomarker effect. The adjustment makes sense for the cases of prevalent IA, since symptomatic individuals might be taking supplements. However, why should the incident IA cases have an adjustment for their baseline supplement use? Can you recalculate the hazard ratios in Table 4 without adjustment for the FA supplement, and either show the hazard ratios or add a brief comment if the recalculation did not make a significant difference?
+
+The Associate Editor addresses a valid point first raised by one of the reviewers on our decision to adjust for omega-3 fatty acid (n-3 FA) supplement use in our analysis of n-3 FA bio markers and incident inflammatory arthritis (IA). We would like to clarify that our adjustment for n-3 FA supplement use is not self-reported use at the start of the study, but the self-reported n-3 FA supplement use at the same visit the n-3 FA bio marker and IA status is assessed and is allowed to vary over time. Therefore, we'd make the argument that the same thought process as our adjustment for the supplement use at baseline in the prevalent model would apply here. Explicitly, we would argue that adjusting for n-3 FA supplement use at the same visit where the n-3 FA bio marker and IA status is measured would account for supplements in subjects who may have begun to take supplements or taking supplements due to possible symptoms.
+
+As per the Associate Editor's request, we have calculated two versions of adjusted models with discussion below each table.
+
+## Adjusted Model: Age, SE positivity, RF positivity, CRP positivity
+
+The following models adjustment for age at baseline, shared epitope status, time-varying RF and CRP positivity.
+
+```{r adj wo n-3 timevary loop, echo=F, message=F, warning=F, results='asis'}
+# create empty matrix for table
+tab_matrix <- matrix(nrow = 6, ncol = 5)
+# column names of tables
+colnames(tab_matrix) <- c("n3_FA_RBC", "HR", "Lower_95_CI",
+                           "Upper_95_CI", "p_value") 
+# variables to loop through
+n3_vars <- c("sd_ala_update", "sd_epa_update", "sd_dpa_update", "sd_dha_update",
+             "sd_epa_dha_update", "sd_total_n3_update")
+
+# fill first column of matrix with n3 vars
+tab_matrix[,1] <- c("ALA", "EPA", "DPA", "DHA", "EPA+DHA",
+                     "Total n-3 FA")
+
+# Iteration of time varying model through n-3 FAs
+for(i in 1:length(n3_vars)){
+
+  # general logistc regression; using tidy from broom to output 
+  # coeffecients
+  tv_surv_mod <- tidy(coxph(as.formula(
+    # formula for loop
+    paste0("Surv(t1, t2, ia ==1) ~", 
+    paste(n3_vars[i], "age_base_bi", "rfneph", 
+    "crp", "se_bi", sep = "+"))),
+    data = timevarying_df)) 
+
+  tv_surv_mod
+  # calculate hazard ratio and 95% CI
+  hazard_ratio <- tv_surv_mod %>% filter(term == n3_vars[i]) %>% 
+    # select terms to keep
+    select(term, estimate, conf.low, conf.high, p.value)
+
+  # fill ith row of table 2
+  tab_matrix[i,2:4] <- round(as.numeric(exp(hazard_ratio[1,2:4])),2)
+  tab_matrix[i,5] <- round(as.numeric(hazard_ratio[1,5]),2)
+
+}
+# create table of logistic values
+# convert table 1 matrix to dataframe
+tab_df <- data.frame(tab_matrix)
+
+knitr::kable(tab_df, caption = paste0("Table 4.1: Association",
+  " between increase in n-3 fatty acid % in red blood cells (RBC) and incident ",
+  "inflammatory arthritis (IA) in ACPA positive subjects. Adjusted for age > 50 at ",
+  "baseline, RF positivity, CRP positivity, and SE positivity."))
+```
+
+Adjusting for the confounding variables age > 50, RF positivity, CRP positivity, and SE positivity produces hazard ratios below 1 for the long-chain n-3 FAs EPA, DPA, and DHA. We note that the inverse association between increasing DPA and incident IA suggests that for each 1 SD increase in DPA levels, the risk for incident IA decreases by 50% and that the confidence intervals and p-value suggest significance at alpha 0.05.
+
+## Adjusted Model: Adding in adjustment for Omega-3 FA supplement use 
+
+Adding in adjustment for omega-3 supplement at study visit (omega-3 supplement allowed to vary in model).
+
+```{r adj w n3 timevary loop, echo=F, message=F, warning=F, results='asis'}
+# create empty matrix for table
+tab_matrix <- matrix(nrow = 6, ncol = 5)
+# column names of tables
+colnames(tab_matrix) <- c("n3_FA_RBC", "HR", "Lower_95_CI",
+                           "Upper_95_CI", "p_value") 
+# variables to loop through
+n3_vars <- c("sd_ala_update", "sd_epa_update", "sd_dpa_update", "sd_dha_update",
+             "sd_epa_dha_update", "sd_total_n3_update")
+
+# fill first column of matrix with n3 vars
+tab_matrix[,1] <- c("ALA", "EPA", "DPA", "DHA", "EPA+DHA",
+                     "Total n-3 FA")
+
+# Iteration of time varying model through n-3 FAs
+for(i in 1:length(n3_vars)){
+
+  # general logistc regression; using tidy from broom to output 
+  # coeffecients
+  tv_surv_mod <- tidy(coxph(as.formula(
+    # formula for loop
+    paste0("Surv(t1, t2, ia ==1) ~", 
+    paste(n3_vars[i], "omega3_bi", "age_base_bi", "rfneph", 
+    "crp", "se_bi", sep = "+"))),
+    data = timevarying_df)) 
+
+  tv_surv_mod
+  # calculate hazard ratio and 95% CI
+  hazard_ratio <- tv_surv_mod %>% filter(term == n3_vars[i]) %>% 
+    # select terms to keep
+    select(term, estimate, conf.low, conf.high, p.value)
+
+  # fill ith row of table 2
+  tab_matrix[i,2:4] <- round(as.numeric(exp(hazard_ratio[1,2:4])),2)
+  tab_matrix[i,5] <- round(as.numeric(hazard_ratio[1,5]),2)
+
+}
+# create table of logistic values
+# convert table 1 matrix to dataframe
+tab_df <- data.frame(tab_matrix)
+
+knitr::kable(tab_df, caption = paste0("Table 4.2: Association",
+  " between increase in n-3 fatty acid % in red blood cells (RBC) and incident ",
+  "inflammatory arthritis (IA) in ACPA positive subjects. Adjusted for n-3 FA ",
+  " supplement use at each visit, age at baseline, RF positivity, CRP positivity,",
+  "and SE positivity."))
+```
+
+Adding in adjustment for n-3 FA supplement use does not change our conclusions much compared to the previous estimates. However, the magnitude of effect for the longer-chain n-3 FA (EPA and DHA) is noticeably more pronounced. The association with DPA remains relatively the same. This led us to the conclusion that n-3 FA supplement use was confounding the association between the n-3 FA bio markers and IA as the bio markers of EPA and DHA (most common long-chain n-3 FAs in most commercially available n-3 FA supplements). 
+
+To address the Associate Editor's inquiry on modulation (which we interpret as mediation), where n-3 FA supplement use should be associated with IA and is mediated through the pathway of increasing n-3 FAs in RBCs, we do not see evidence for this. If modulation/mediation were present, we'd see model 4.2 attenuated to the null effect of HR = 1.0 compared to model 4.1. We observed the opposite effect.
+
+We have also added a statment to the 5th paragraph in the discussion section of the manuscript as follows: 
+
+> This influenced our decision to adjust for n-3 FA supplement use in both the baseline prevalent IA and incident IA study designs. **This adjustment was important for the prevalent IA at baseline analysis, but was not as important in the incident IA analysis but was done to keep a harmonious analytic approach (data not shown).** It also led us to focus our research question on the biomarkers, n-3 FA % in RBCs,... 
+
+
+We hope this addresses the Associate Editor's query sufficiently. Please do not hesitate to contact us with further questions.
